@@ -1,0 +1,80 @@
+{{- if .Values.rbac.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "botnetworkpolicy-operator.fullname" . }}
+  labels:
+    {{- include "botnetworkpolicy-operator.labels" . | nindent 4 }}
+rules:
+# BotNetworkPolicy CRD permissions
+- apiGroups:
+  - bot.networking.dev
+  resources:
+  - botnetworkpolicies
+  verbs:
+  - get
+  - list
+  - watch
+  - update
+  - patch
+- apiGroups:
+  - bot.networking.dev
+  resources:
+  - botnetworkpolicies/status
+  verbs:
+  - get
+  - update
+  - patch
+# NetworkPolicy permissions
+- apiGroups:
+  - networking.k8s.io
+  resources:
+  - networkpolicies
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+# ConfigMap permissions (for configMap provider)
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+# Secret permissions (for jsonEndpoint provider)
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+# Event permissions
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+# Leader election permissions
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+{{- end }}

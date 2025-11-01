@@ -1,5 +1,8 @@
 # Bot Network Policy Operator
 
+[![CI](https://github.com/sugaf1204/botnetworkpolicy/actions/workflows/ci.yaml/badge.svg)](https://github.com/sugaf1204/botnetworkpolicy/actions/workflows/ci.yaml)
+[![CD](https://github.com/sugaf1204/botnetworkpolicy/actions/workflows/cd.yaml/badge.svg)](https://github.com/sugaf1204/botnetworkpolicy/actions/workflows/cd.yaml)
+
 The Bot Network Policy Operator manages Kubernetes `NetworkPolicy` objects that allow ingress/egress traffic exclusively from known bot IP ranges published by popular cloud platforms and custom sources.  It periodically refreshes provider allowlists and keeps a deterministic NetworkPolicy in sync for each `BotNetworkPolicy` custom resource.
 
 ## Features
@@ -47,10 +50,74 @@ spec:
 
 The operator will create or update a `NetworkPolicy` named `<metadata.name>-allow-bots` (or a custom name specified via the `bot.networking.dev/networkpolicy-name` annotation) in the same namespace. The generated policy contains ingress rules (and optional egress rules) limited to the merged set of CIDRs.
 
+## Installation
+
+### Using Helm
+
+The operator can be easily installed using Helm:
+
+```bash
+# Install from the Helm chart
+helm install botnetworkpolicy-operator ./charts/botnetworkpolicy-operator \
+  --namespace botnetworkpolicy-system \
+  --create-namespace
+
+# Or install from a released package (after first release)
+helm install botnetworkpolicy-operator \
+  https://github.com/sugaf1204/botnetworkpolicy/releases/download/v0.1.0/botnetworkpolicy-operator-0.1.0.tgz \
+  --namespace botnetworkpolicy-system \
+  --create-namespace
+```
+
+### Configuration
+
+You can customize the installation by overriding values:
+
+```bash
+helm install botnetworkpolicy-operator ./charts/botnetworkpolicy-operator \
+  --namespace botnetworkpolicy-system \
+  --create-namespace \
+  --set image.tag=v0.1.0 \
+  --set replicaCount=2 \
+  --set resources.limits.memory=512Mi
+```
+
+See [values.yaml](charts/botnetworkpolicy-operator/values.yaml) for all available configuration options.
+
 ## Getting Started
 
-1. Deploy the CRD and controller manifests (to be generated via controller-tools) to your cluster.
+1. Install the operator using Helm (see Installation section above).
 2. Apply a `BotNetworkPolicy` resource in the target namespace.
 3. Confirm that a `NetworkPolicy` with the `botnetworkpolicy.bot.networking.dev/owner` label appears and contains the expected IP blocks.
 
 See [`docs/development.md`](docs/development.md) for development workflows and testing guidance.
+
+## CI/CD
+
+This project uses GitHub Actions for continuous integration and deployment:
+
+- **CI Pipeline** (`.github/workflows/ci.yaml`): Runs on every push and pull request
+  - Executes Go tests with race detection and coverage
+  - Runs golangci-lint for code quality
+  - Builds Docker image to verify successful build
+  - Lints and validates Helm chart
+
+- **CD Pipeline** (`.github/workflows/cd.yaml`): Runs on version tags (e.g., `v1.0.0`)
+  - Builds multi-architecture Docker images (amd64, arm64)
+  - Pushes images to GitHub Container Registry (`ghcr.io`)
+  - Packages and releases Helm chart as a GitHub release asset
+
+### Creating a Release
+
+To create a new release:
+
+```bash
+# Create and push a version tag
+git tag -a v0.1.0 -m "Release v0.1.0"
+git push origin v0.1.0
+```
+
+The CD pipeline will automatically:
+1. Build and push the Docker image with tags: `v0.1.0`, `v0.1`, `v0`
+2. Package the Helm chart with version `0.1.0`
+3. Create a GitHub release with the Helm chart package

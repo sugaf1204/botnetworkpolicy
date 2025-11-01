@@ -1,0 +1,41 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your release is named {{ .Release.Name }}.
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }}
+  $ helm get all {{ .Release.Name }}
+
+The BotNetworkPolicy Operator has been deployed to namespace {{ .Release.Namespace }}.
+
+To create a BotNetworkPolicy custom resource, create a YAML file like:
+
+  apiVersion: bot.networking.dev/v1alpha1
+  kind: BotNetworkPolicy
+  metadata:
+    name: example
+    namespace: default
+  spec:
+    podSelector:
+      matchLabels:
+        app: web
+    syncPeriod: 30m
+    providers:
+      - name: google
+      - name: aws
+      - name: github
+
+Apply it with:
+
+  $ kubectl apply -f your-botnetworkpolicy.yaml
+
+Check the status:
+
+  $ kubectl get botnetworkpolicies
+  $ kubectl describe botnetworkpolicy example
+
+The operator will automatically create a NetworkPolicy named 'example-allow-bots'
+in the same namespace.
+
+For more information, visit: https://github.com/sugaf1204/botnetworkpolicy

@@ -90,6 +90,10 @@ func googleSelectorWithScope(data map[string]any, scopes []string) ([]string, er
 	return results, nil
 }
 
+func googleSelector(data map[string]any) ([]string, error) {
+	return googleSelectorWithScope(data, nil)
+}
+
 func awsSelectorWithFilter(data map[string]any, services, regions, networkBorderGroups []string) ([]string, error) {
 	prefixesRaw, ok := data["prefixes"].([]any)
 	if !ok {
@@ -155,6 +159,12 @@ func awsSelectorWithFilter(data map[string]any, services, regions, networkBorder
 	return results, nil
 }
 
+func awsSelector(data map[string]any) ([]string, error) {
+	defaultServices := []string{"AMAZON", "AMAZON_CONNECT"}
+	defaultRegions := []string{"GLOBAL", "us-east-1"}
+	return awsSelectorWithFilter(data, defaultServices, defaultRegions, nil)
+}
+
 func githubSelectorWithRoles(data map[string]any, roles []string) ([]string, error) {
 	// If no roles specified, default to hooks
 	if len(roles) == 0 {
@@ -181,6 +191,26 @@ func githubSelectorWithRoles(data map[string]any, roles []string) ([]string, err
 
 	if len(results) == 0 {
 		return nil, fmt.Errorf("no CIDRs found for roles: %v", roles)
+	}
+	return results, nil
+}
+
+func githubSelector(data map[string]any) ([]string, error) {
+	hooks, ok := data["hooks"]
+	emptyHooksArray := false
+	if ok {
+		if arr, ok := hooks.([]any); ok {
+			if len(arr) == 0 {
+				emptyHooksArray = true
+			}
+		}
+	}
+	results, err := githubSelectorWithRoles(data, nil)
+	if err != nil {
+		if emptyHooksArray && strings.Contains(err.Error(), "no CIDRs found") {
+			return []string{}, nil
+		}
+		return nil, err
 	}
 	return results, nil
 }

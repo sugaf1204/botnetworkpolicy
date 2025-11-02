@@ -101,6 +101,11 @@ func (f *Factory) FromSpec(namespace string, spec v1alpha1.ProviderSpec) (Provid
 	case "aws":
 		url := f.awsEndpoint
 		var services, regions, nbgs []string
+
+		// When spec.AWS is provided, respect the API contract:
+		// - Empty services = all services
+		// - Empty regions = all regions
+		// - Empty NBGs = all NBGs
 		if spec.AWS != nil {
 			if spec.AWS.URL != "" {
 				url = spec.AWS.URL
@@ -109,16 +114,8 @@ func (f *Factory) FromSpec(namespace string, spec v1alpha1.ProviderSpec) (Provid
 			regions = spec.AWS.Regions
 			nbgs = spec.AWS.NetworkBorderGroups
 		}
-		// Apply default service filter if not explicitly specified
-		// This maintains backward compatibility and security by restricting to
-		// AMAZON/AMAZON_CONNECT services even when regions or NBGs are customized
-		if len(services) == 0 {
-			services = []string{"AMAZON", "AMAZON_CONNECT"}
-		}
-		// Apply default region filter only if no filters are specified at all
-		if len(regions) == 0 && len(nbgs) == 0 {
-			regions = []string{"GLOBAL", "us-east-1"}
-		}
+		// If spec.AWS is nil (name: aws only), all fields are empty = all IPs
+
 		selector := func(data map[string]any) ([]string, error) {
 			return awsSelectorWithFilter(data, services, regions, nbgs)
 		}

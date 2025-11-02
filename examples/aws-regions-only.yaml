@@ -12,9 +12,8 @@ spec:
   providers:
     - name: aws
       aws:
-        # Customize regions while keeping default service filter
-        # Services will default to AMAZON and AMAZON_CONNECT
-        # This maintains security by not including all AWS services
+        # Specify only regions - empty services means all AWS services
+        # will be included from these regions
         regions:
           - eu-west-1
           - eu-central-1

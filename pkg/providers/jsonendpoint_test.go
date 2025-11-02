@@ -23,7 +23,7 @@ func TestNavigateField(t *testing.T) {
 
 func TestInterpretCIDRs(t *testing.T) {
 	items := []any{"10.0.0.0/24", "10.0.1.0/24"}
-	cidrs, err := interpretCIDRs(items)
+	cidrs, err := interpretCIDRs(items, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -31,7 +31,7 @@ func TestInterpretCIDRs(t *testing.T) {
 		t.Fatalf("expected 2 cidrs, got %d", len(cidrs))
 	}
 
-	if _, err := interpretCIDRs([]any{"10.0.0.0/24", 5}); err == nil {
+	if _, err := interpretCIDRs([]any{"10.0.0.0/24", 5}, nil); err == nil {
 		t.Fatalf("expected error for non-string entry")
 	}
 }

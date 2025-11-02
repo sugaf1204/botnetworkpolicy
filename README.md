@@ -75,10 +75,6 @@ helm install botnetworkpolicy-operator \
 ```bash
 # Apply the CRD directly
 kubectl apply -f charts/botnetworkpolicy-operator-chart/crds/bot.networking.dev_botnetworkpolicies.yaml
-
-# Or if upgrading from OCI registry, extract and apply
-helm pull oci://ghcr.io/sugaf1204/chart/botnetworkpolicy-operator-chart --version 0.1.0 --untar
-kubectl apply -f botnetworkpolicy-operator-chart/crds/
 ```
 
 ### Configuration

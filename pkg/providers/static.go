@@ -49,16 +49,37 @@ const (
 )
 
 func googleSelector(data map[string]any) ([]string, error) {
+	return googleSelectorWithScope(data, nil)
+}
+
+func googleSelectorWithScope(data map[string]any, scopes []string) ([]string, error) {
 	prefixesRaw, ok := data["prefixes"].([]any)
 	if !ok {
 		return nil, fmt.Errorf("missing prefixes")
 	}
+
+	// Convert scopes to a map for efficient lookup
+	scopeMap := make(map[string]bool)
+	for _, scope := range scopes {
+		scopeMap[strings.ToLower(strings.TrimSpace(scope))] = true
+	}
+	filterByScope := len(scopeMap) > 0
+
 	results := make([]string, 0)
 	for _, prefix := range prefixesRaw {
 		item, _ := prefix.(map[string]any)
 		if item == nil {
 			continue
 		}
+
+		// Apply scope filter if specified
+		if filterByScope {
+			scope, _ := item["scope"].(string)
+			if !scopeMap[strings.ToLower(strings.TrimSpace(scope))] {
+				continue
+			}
+		}
+
 		if ipv4, ok := item["ipv4Prefix"].(string); ok {
 			if value := strings.TrimSpace(ipv4); value != "" {
 				results = append(results, value)
@@ -74,27 +95,69 @@ func googleSelector(data map[string]any) ([]string, error) {
 }
 
 func awsSelector(data map[string]any) ([]string, error) {
+	// Default behavior: only AMAZON/AMAZON_CONNECT services in GLOBAL/us-east-1
+	return awsSelectorWithFilter(data, []string{"AMAZON", "AMAZON_CONNECT"}, []string{"GLOBAL", "us-east-1"}, nil)
+}
+
+func awsSelectorWithFilter(data map[string]any, services, regions, networkBorderGroups []string) ([]string, error) {
 	prefixesRaw, ok := data["prefixes"].([]any)
 	if !ok {
 		return nil, fmt.Errorf("missing prefixes")
 	}
+
+	// Convert filters to maps for efficient lookup
+	serviceMap := make(map[string]bool)
+	for _, svc := range services {
+		serviceMap[strings.ToUpper(strings.TrimSpace(svc))] = true
+	}
+	filterByService := len(serviceMap) > 0
+
+	regionMap := make(map[string]bool)
+	for _, reg := range regions {
+		regionMap[strings.ToLower(strings.TrimSpace(reg))] = true
+	}
+	filterByRegion := len(regionMap) > 0
+
+	nbgMap := make(map[string]bool)
+	for _, nbg := range networkBorderGroups {
+		nbgMap[strings.ToLower(strings.TrimSpace(nbg))] = true
+	}
+	filterByNBG := len(nbgMap) > 0
+
 	results := make([]string, 0)
 	for _, prefix := range prefixesRaw {
 		item, _ := prefix.(map[string]any)
 		if item == nil {
 			continue
 		}
-		if service, _ := item["service"].(string); service != "AMAZON" && service != "AMAZON_CONNECT" {
-			continue
+
+		// Apply service filter
+		if filterByService {
+			service, _ := item["service"].(string)
+			if !serviceMap[strings.ToUpper(strings.TrimSpace(service))] {
+				continue
+			}
 		}
-		// GitHub documents that hook delivery traffic originates from the GLOBAL and us-east-1
-		// regions. Restricting the ranges we ingest keeps the resulting NetworkPolicies focused on
-		// the documented bot endpoints instead of the full AWS address space.
-		if region, _ := item["region"].(string); region == "GLOBAL" || region == "us-east-1" {
-			if cidr, ok := item["ip_prefix"].(string); ok {
-				if value := strings.TrimSpace(cidr); value != "" {
-					results = append(results, value)
-				}
+
+		// Apply region filter
+		if filterByRegion {
+			region, _ := item["region"].(string)
+			if !regionMap[strings.ToLower(strings.TrimSpace(region))] {
+				continue
+			}
+		}
+
+		// Apply network border group filter
+		if filterByNBG {
+			nbg, _ := item["network_border_group"].(string)
+			if !nbgMap[strings.ToLower(strings.TrimSpace(nbg))] {
+				continue
+			}
+		}
+
+		if cidr, ok := item["ip_prefix"].(string); ok {
+			if value := strings.TrimSpace(cidr); value != "" {
+				results = append(results, value)
 			}
 		}
 	}
@@ -102,17 +165,36 @@ func awsSelector(data map[string]any) ([]string, error) {
 }
 
 func githubSelector(data map[string]any) ([]string, error) {
-	hooks, ok := data["hooks"].([]any)
-	if !ok {
-		return nil, fmt.Errorf("missing hooks field")
+	// Default behavior: only "hooks" role
+	return githubSelectorWithRoles(data, []string{"hooks"})
+}
+
+func githubSelectorWithRoles(data map[string]any, roles []string) ([]string, error) {
+	// If no roles specified, default to hooks
+	if len(roles) == 0 {
+		roles = []string{"hooks"}
 	}
-	results := make([]string, 0, len(hooks))
-	for _, hook := range hooks {
-		if cidr, ok := hook.(string); ok {
-			if value := strings.TrimSpace(cidr); value != "" {
-				results = append(results, value)
+
+	results := make([]string, 0)
+	for _, role := range roles {
+		roleKey := strings.ToLower(strings.TrimSpace(role))
+		roleData, ok := data[roleKey].([]any)
+		if !ok {
+			// Role field doesn't exist or is not an array, skip
+			continue
+		}
+
+		for _, item := range roleData {
+			if cidr, ok := item.(string); ok {
+				if value := strings.TrimSpace(cidr); value != "" {
+					results = append(results, value)
+				}
 			}
 		}
+	}
+
+	if len(results) == 0 {
+		return nil, fmt.Errorf("no CIDRs found for roles: %v", roles)
 	}
 	return results, nil
 }

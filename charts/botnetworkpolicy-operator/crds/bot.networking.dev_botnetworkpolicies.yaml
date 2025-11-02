@@ -175,10 +175,93 @@ spec:
                       - key
                       - name
                       type: object
+                    google:
+                      description: Google configures the Google provider with role-specific
+                        settings.
+                      properties:
+                        scope:
+                          description: Scope filters which Google services to include.
+                            If empty, all services are included.
+                          items:
+                            type: string
+                          type: array
+                        url:
+                          description: URL overrides the default Google Cloud IP ranges
+                            endpoint.
+                          type: string
+                      type: object
+                    aws:
+                      description: AWS configures the AWS provider with service and
+                        region filtering.
+                      properties:
+                        networkBorderGroups:
+                          description: NetworkBorderGroups filters by network border
+                            group. If empty, all groups are included.
+                          items:
+                            type: string
+                          type: array
+                        regions:
+                          description: Regions filters which AWS regions to include.
+                            If empty, all regions are included.
+                          items:
+                            type: string
+                          type: array
+                        services:
+                          description: Services filters which AWS services to include.
+                            If empty, all services are included.
+                          items:
+                            type: string
+                          type: array
+                        url:
+                          description: URL overrides the default AWS IP ranges endpoint.
+                          type: string
+                      type: object
+                    github:
+                      description: GitHub configures the GitHub provider with role
+                        selection.
+                      properties:
+                        roles:
+                          description: Roles selects which GitHub service roles to
+                            include. If empty, only "hooks" is used.
+                          items:
+                            type: string
+                          type: array
+                        url:
+                          description: URL overrides the default GitHub meta API endpoint.
+                          type: string
+                      type: object
                     jsonEndpoint:
                       description: JSONEndpoint configures the JSON endpoint provider
                         that extracts CIDRs from a JSON response body.
                       properties:
+                        filter:
+                          description: Filter optionally filters array elements based
+                            on field conditions. Only elements matching all filter
+                            conditions will be included.
+                          properties:
+                            fieldConditions:
+                              description: FieldConditions specifies field-level matching
+                                conditions. All conditions must match for an element
+                                to be included.
+                              items:
+                                description: FieldCondition matches a field against
+                                  one or more values.
+                                properties:
+                                  field:
+                                    description: Field is the JSON field name to match
+                                      against.
+                                    type: string
+                                  values:
+                                    description: Values are the accepted values for
+                                      this field. If empty, any non-empty value matches.
+                                    items:
+                                      type: string
+                                    type: array
+                                required:
+                                - field
+                                type: object
+                              type: array
+                          type: object
                         fieldPath:
                           description: FieldPath selects the JSON path (dot-separated)
                             that contains the CIDR list.
